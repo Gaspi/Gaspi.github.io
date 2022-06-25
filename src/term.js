@@ -49,14 +49,16 @@ function DeclConst(ln,name,params,type)  {
       type: params.reduceRight((a,b)=>[b,a],type)
     };
 }
-function DeclInj(ln,name)                { return {[c]:'DeclInj'  , ln, name               }; }
-function Rew(ln,lhs,rhs,name,check=true) { return {[c]:'Rew'      , ln, lhs,rhs,name,check }; }
-function CmdReq(ln,module)               { return {[c]:'Req'      , ln, module             }; }
-function CmdEval(ln,ctx,term)            { return {[c]:'Eval'     , ln, ctx,term           }; }
-function CmdInfer(ln,ctx,term)           { return {[c]:'Infer'    , ln, ctx,term           }; }
-function CmdCheckType(ln,ctx,term,type)  { return {[c]:'CheckType', ln, ctx,term,type      }; }
-function CmdCheckConv(ln,ctx,lhs,rhs,cv) { return {[c]:'CheckConv', ln, ctx,lhs,rhs,cv    }; }
-function CmdPrint(ln,term)               { return {[c]:'Print'    , ln, term               }; }
+function DeclInj(   ln,name)             { return {[c]:'DeclInj'   , ln, name               }; }
+function DeclConstP(ln,name)             { return {[c]:'DeclConstP', ln, name               }; }
+function Rew(ln,lhs,rhs,name,check=true) { return {[c]:'Rew'       , ln, lhs,rhs,name,check }; }
+function CmdReq(ln,module,alias)               { return {[c]:'Req' , ln, module, alias      }; }
+function CmdEval(ln,ctx,term)            { return {[c]:'Eval'      , ln, ctx,term           }; }
+function CmdInfer(ln,ctx,term)           { return {[c]:'Infer'     , ln, ctx,term           }; }
+function CmdCheckType(ln,ctx,term,type)  { return {[c]:'CheckType' , ln, ctx,term,type      }; }
+function CmdCheckConv(ln,ctx,lhs,rhs,cv) { return {[c]:'CheckConv' , ln, ctx,lhs,rhs,cv     }; }
+function CmdPrint(ln,term)               { return {[c]:'Print'     , ln, term               }; }
+function CmdDTree(ln,name)               { return {[c]:'DTree'     , ln, name               }; }
 
 // Shifts variables deeper than [depth] by [inc] in the term [term]
 function shift(term, inc=1, depth=0) {

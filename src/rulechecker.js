@@ -82,6 +82,10 @@ class RuleChecker {
   
   //TODO: move what is possible to Assumptions...
   
+  is_injective(t) {
+    return t[c]==='Var' || (t[c]==='Ref' && this.red.is_injective(t.name));
+  }
+  
   // Record a new type
   assume_mvar_type(assumptions,term, expected_type, ctx) {
     const acc = [];
@@ -116,7 +120,7 @@ class RuleChecker {
       } else if (a[c] === "App") {
         const [head_a, args_a] = get_head(a);
         const [head_b, args_b] = get_head(b);
-        if (equals(head_a,head_b) && this.sig.is_injective(head_a)) {
+        if (equals(head_a,head_b) && this.is_injective(head_a)) {
           if (args_a.length !== args_b.length) {
             fail('LHS Conversion Check',
               'Non unifiable terms: `'+pp_term(a)+"` and `"+pp_term(b)+"`.");
@@ -326,7 +330,7 @@ class RuleChecker {
       if (term.type.star) {
         term.type = type.dom;
       } else if (!this.are_convertible(assumptions, term.type, type.dom)) {
-        fail("RHS Check", "Incompatible annotation `"+pp_term(term, ctx)+"`."+
+        fail("RHS Check", "Incompatible annotation `"+pp_term(term, ctx)+"`.\n"+
           "- Expect = " + pp_term(type.dom, ctx)+"\n"+
           "- Actual = " + pp_term(term.type, ctx)+"\n"+
           pp_context(ctx) + assumptions.pp());

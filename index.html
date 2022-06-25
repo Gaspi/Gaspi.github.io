@@ -26,7 +26,10 @@
           </button>
           <ul class="dropdown-menu w-100" aria-labelledby="dropdown_examples">
             <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">intro.dk</a></li>
-            <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">demo.dk</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">intro-advanced.dk</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">FO-cons.dk</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">FO-rew.dk</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">FO-nat.dk</a></li>
             <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">arities.dk</a></li>
             <li><a class="dropdown-item" href="#" onclick="load_example(this.innerHTML)">arities2.dk</a></li>
             <li><hr class="dropdown-divider"></li>
@@ -169,11 +172,15 @@ function process_instruction(sig,rulechecker,ins) {
       break;
     case "DeclConst":
       sig.declare_symbol(ins);
-      sig.env.freeze_symbol(ins.name);
+      sig.red.declare_constant(ins.name);
       log_ok(ins.ln,"Constant symbol declared",ins.name+" with type " +pp_term(ins.type) );
       break;
+    case "DeclConstP":
+      sig.red.declare_constant(ins.name);
+      log_ok(ins.ln,"Symbol declared constant",ins.name);
+      break;
     case "DeclInj":
-      sig.env.freeze_symbol(ins.name);
+      sig.red.declare_injective(ins.name);
       log_ok(ins.ln,"Symbol declared injective",ins.name+" (no check)");
       break;
     case "Def":
@@ -216,6 +223,9 @@ function process_instruction(sig,rulechecker,ins) {
       break;
     case "Print":
       log_info(ins.ln,"Show",pp_term(ins.term));
+      break;
+    case "DTree":
+      log_info(ins.ln,"DTree","Decision tree for symbol `"+ins.name+"`:\n"+pp_dtrees(sig.red.get(ins.name).decision_trees));
       break;
     default:
       throw "Instruction:\nUnexepected instruction type:"+ins[c];

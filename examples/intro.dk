@@ -12,7 +12,6 @@ zero : Nat;
 succ : Nat -> Nat;
 plus : Nat -> Nat -> Nat;
 
-
 // Rewrite rules allow to define computation
 zero_left_neutral : plus zero n --> n;
 // Since `n` doesn't refer to a defined symbol, it is inferred to be a meta-variable
@@ -21,11 +20,11 @@ zero_left_neutral : plus zero n --> n;
 : plus n zero --> n;
 : plus (succ n) m --> succ (plus n m);
 : plus n (succ m) --> succ (plus n m);
-// All rules must preserve types
+// All rules must be "type preserving"
 // For instance the following rule is not accepted
 //: plus --> zero;
 
-// Symbols can be defined
+// Symbols can be provided a definition
 one : Nat := succ zero;
 //... which is equivalent to defining them with a rewrite rule
 two : Nat;
@@ -55,10 +54,9 @@ twice : Nat -> Nat :=
 // The `#CHECK` command supports a local context of variables
 #CHECK x : Nat, y : Nat -> Nat |- y x : Nat;
 
-// The `#CHECK` also allows to check conversion
+// The `#CHECK` also allows to check (non-)conversion
 #CHECK x:Nat |- (n:Nat => plus n two) x == succ (succ x);
-// ... or on the contrary that two terms are not convertible (for now)
-#CHECK x:Nat |- (n:Nat => plus n n) x != succ (succ x);
+#CHECK x:Nat |- (n:Nat => plus n n  ) x != succ (succ x);
 
 
 // Dependent product type allow to define lists parameterized by their size
@@ -73,52 +71,20 @@ append: n:Nat -> Vector n -> m:Nat -> Vector m -> Vector (plus n m);
 : append (succ n) (cons n e v1) m v2 --> cons (plus n m) e (append n v1 m v2);
 
 
-
-
-eq: Nat -> Nat -> Nat;
-: eq n n --> one;
-
-
-
-type: Type;
 // Symbols can be declared "constant" with the `#CONST` command.
 // This forbids it to be rewritten but helps the type checking
+type: Type;
 #CONST arrow: type -> type -> type;
-// Symbols can also be declared "injective" with the `#INJECTIVE` command.
-// This forbids it to be *further* rewritten and helps the type checking.
-// Note that the injectivity is assumed for now and not checked.
-term: type -> Type;
-#INJECTIVE term;
+#CONST term: type -> Type;
 
 
 // Dedukti supports matching against higher order patterns
 // Meta-variable may depends on an explicit list of locally bounded variables
-//   A meta-variable instance is written :    Var[x,y,z, ...]
+//   A meta-variable instance is written :  Var[x,y,z, ...]
 // In fact first order meta-variable are higher-order ones with an empty list of parameters
 app: a:type -> b:type -> term (arrow a b) -> term a -> term b;
 lambda: a:type -> b:type -> (term a -> term b) -> term (arrow a b);
 : app a b (lambda a2 b2 (x => f[x])) arg --> f[arg];
-
-constant : (Nat -> Nat) -> Nat;
-: constant (x => C) --> one;
-#CHECK constant (x => zero) == one;
-#CHECK constant (x => x   ) != one;
-
-// Note: instances of nameless meta-variables `*` are always assumed
-// applied to all available locally bounded variables.
-dummy : (Nat -> Nat) -> Nat;
-: dummy (x => *) --> one;
-#CHECK dummy (x => zero) == one;
-#CHECK dummy (x => x   ) == one;
-
-
-// Parameters can be added to declared or defined symbols
-f (t:type) (x:term t) : term (arrow t t):= lambda t t (z => z);
-#EVAL f;
-#INFER f;
-
-#EVAL  a:type, z:term a |- f a z;
-#INFER a:type, z:term a |- f a z;
 
 
 
@@ -126,6 +92,7 @@ f (t:type) (x:term t) : term (arrow t t):= lambda t t (z => z);
 // 
 // The dropdown menu (top of the left panel) lets you load more examples
 // or your own files (which you can also drag and drop in the text area)
-// but its also fine to just play with editor.
+// but you can also use this editor to start right away.
 // 
-// I hope you have fun with Dedukti !
+// Have fun with Dedukti !
+////////////////////////////////////////////////////////////////////////////////////////////////////

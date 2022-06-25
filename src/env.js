@@ -39,9 +39,6 @@ class Environment {
     t.type = type;
   }
   
-  freeze_symbol(name) { this.do_get(name).frozen = true; }
-  is_frozen(name) { return this.do_get(name).frozen || false; }
-  
   scope_instruction(ins) {
     if (ins.ctx ) { ins.ctx  = this.scope_ctx(ins.ctx); }
     if (ins.term) { ins.term = this.scope(ins.term, ins.ctx); }
