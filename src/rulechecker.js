@@ -1,5 +1,4 @@
 
-
 // Returns [term] where each free variables instance x#0 in turned into a meta-variable
 // whose name !3 corresponds to its DeBruijn *level*. (assuming ctx_size=4 in the example)
 function vars_to_meta(term, ctx_size, depth=0) {
@@ -15,7 +14,6 @@ function vars_to_meta(term, ctx_size, depth=0) {
   }
   return s(term,depth);
 }
-
 
 // Checks whether the given term is a non-pattern meta-variable instance.
 function is_non_pattern_instance(term) {
@@ -36,9 +34,8 @@ function is_non_pattern_instance(term) {
 }
 
 // Typing and convertion assumptions mechanisms
-class Assumptions {
-  constructor(sig) {
-    this.sig = sig;
+class AssumptionSet {
+  constructor() {
     this.assumed_types = [];
     this.assumed_conv = [];
     // Progressively build a variable substitution
@@ -70,10 +67,9 @@ class Assumptions {
 // Rule checking entry point
 class RuleChecker {
   
-  constructor(sig) {
-    this.sig = sig;
-    this.env = sig.env;
-    this.red = sig.red;
+  constructor(env,red) {
+    this.env = env;
+    this.red = red;
   }
   
   //////////////////////////////////////////////////////////////
@@ -301,7 +297,7 @@ class RuleChecker {
         const func_t = this.whnf(assumptions, this.rhs_infer(assumptions, term.func, ctx));
         if (func_t[c] !== "All") {
           fail("RHS Infer","Non-function application on `" +
-            pp_term(term, ctx) + "`.\n" + pp_context(ctx));
+            pp_term(term, ctx) + "`.\n" + pp_context(ctx) + assumptions.pp());
         }
         this.rhs_check(assumptions, term.argm, func_t.dom, ctx);
         return subst(func_t.cod, term.argm);
@@ -378,7 +374,7 @@ class RuleChecker {
   
   check_rule_type_preservation(rule) {
     if (!rule.check) { return; }
-    const assumptions = new Assumptions(this.sig);
+    const assumptions = new AssumptionSet();
     const inferred_type = this.lhs_infer(assumptions, rule.lhs);
     this.rhs_check(assumptions, rule.rhs, inferred_type);
   }

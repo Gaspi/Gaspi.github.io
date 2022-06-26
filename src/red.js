@@ -18,7 +18,6 @@ function filter_rules(rules,arity) {
 
 class ReductionEngine {
   red = new Map();
-  
   constructor() {}
   
   // Get info about a symbol (adds a new entry if needed) 

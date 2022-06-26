@@ -11,11 +11,11 @@
   <!-- Syntax coloring: CSS style -->
   <link rel="stylesheet" href="ressources/syntax_coloring.css">
 </head>
-<body>
+<body style="overflow:clip;">
 
 <div class="container-fluid main-wrapper">
   <div class="row justify-content-left">
-    <div class="col justify-content-center" style="max-width: 600px; background: #f2f2f2;">
+    <div class="col justify-content-center vh-100 d-flex flex-column" style="background: #f2f2f2;">
       <div class="mx-2">
         <button type="button" class="btn btn-primary btn-lg my-2 w-100" onclick="process_all_instructions()">
           Type Check !
@@ -39,11 +39,11 @@
         </div>
       </div>
       <h2 class="text-center">Ouput</h2>
-      <div id="logs"></div>
+      <div class="flex-fill overflow-auto" id="logs"></div>
     </div>
-    <div class="col">
+    <div class="col vh-100 d-flex flex-column">
       <h2 class="text-center">Dedukti</h2>
-      <div class="form-outline mx-3 mt-2">
+      <div id="editor-wrapper" class="mx-3 mt-2 flex-fill overflow-auto">
         <div id="editor" class="editor" style="font-family:monospace"></div>
       </div>
     </div>
@@ -58,10 +58,9 @@
 <script src="src/env.js"></script>
 <script src="src/dtree.js"></script>
 <script src="src/red.js"></script>
-<script src="src/sig.js"></script>
-<script src="src/rulechecker.js"></script>
 <script src="src/pp.js"></script>
-<!--<script src="src/meta_context.js"></script> -->
+<script src="src/rulechecker.js"></script>
+<script src="src/sig.js"></script>
 
 <script src="ressources/moo.js"></script>
 <script src="src/grammar.js"></script>
@@ -114,8 +113,7 @@ function download_file() {
   document.body.appendChild(link);
   link.click();
 
-  // To make this work on Firefox we need to wait
-  // a little while before removing it.
+  // To make this work on Firefox : wait a little while before removing it.
   setTimeout(() => {
     URL.revokeObjectURL(link.href);
     link.parentNode.removeChild(link);
@@ -125,30 +123,41 @@ function download_file() {
 // Logs handling
 const logs = document.getElementById("logs");
 function clear_logs() { logs.innerHTML = ""; }
-function log_ok(ln,title,msg)   { log(ln,title,msg,['alert','alert-success']); }
-function log_info(ln,title,msg) { log(ln,title,msg,['alert','alert-info']); }
-function log_warn(ln,title,msg) { log(ln,title,msg,['alert','alert-warning']); }
-function log_err(err) {
-  if (err.title) {
-    log(err.ln,'ERROR: '+err.title, err.msg, ['alert','alert-danger']);
-  } else {
-    const msg = (err.msg || err)+"";
-    if (msg.startsWith("Syntax error ")) {
-      log(err.ln,'SYNTAX ERROR', msg.slice(13), ['alert','alert-danger']);
-    } else {
-      log(err.ln,'ERROR', err, ['alert','alert-danger']);
-    }
-  }
-}
 // Display a new block in the loading area
-function log(ln,title,msg,classes=[]) {
+const editor_wrapper = document.getElementById('editor-wrapper');
+function log(status,ln,title,msg) {
   const div = document.createElement('div');
   div.style['white-space']= 'pre-wrap';
   div.innerHTML = (ln?ln+": ":"")+'<strong>['+title+']</strong> '+msg;
-  div.classList.add('p-1');
-  div.classList.add('m-2');
-  classes.forEach((x)=>div.classList.add(x));
+  div.classList.add('p-1', 'm-2', 'alert');
+  const tag = {
+    ok  :'success',
+    info:'info',
+    warn:'warning',
+    err :'danger',
+    }[status];
+  div.classList.add('alert-'+tag);
   logs.appendChild(div);
+  if (ln>0) {
+    const hovering = div.cloneNode();
+    editor_wrapper.appendChild(hovering);
+    hovering.style.zIndex=100;
+    hovering.style.position = "absolute";
+    hovering.style.display = "none";
+    hovering.innerHTML = '<strong>['+title+']</strong> '+msg;
+    const l = document.getElementById('l'+ln);
+    l.classList.add('text-'+tag);
+    l.href="#"
+    l.onmouseover = function() {
+      hovering.style.width = parseInt(window.getComputedStyle(editor).getPropertyValue('width'))*0.8+"px";
+      const bounds = l.getBoundingClientRect();
+      hovering.style.display = 'block';
+      hovering.style.left = 58+"px";
+      hovering.style.top  = (bounds.top+11)+"px";
+    };
+    l.onmouseout = function() { hovering.style.display = 'none'; };
+    l.onclick = function() { div.scrollIntoView(); };
+  }
 }
 
 // Create a Parser object from our grammar.
@@ -162,92 +171,20 @@ function parse(code) {
   return parser.results[0];
 }
 
-// Process a single unscoped instruction
-function process_instruction(sig,rulechecker,ins) {
-  sig.env.scope_instruction(ins);
-  switch (ins[c]) {
-    case "Decl":
-      sig.declare_symbol(ins);
-      log_ok(ins.ln,"Symbol declared",ins.name+" with type " +pp_term(ins.type) );
-      break;
-    case "DeclConst":
-      sig.declare_symbol(ins);
-      sig.red.declare_constant(ins.name);
-      log_ok(ins.ln,"Constant symbol declared",ins.name+" with type " +pp_term(ins.type) );
-      break;
-    case "DeclConstP":
-      sig.red.declare_constant(ins.name);
-      log_ok(ins.ln,"Symbol declared constant",ins.name);
-      break;
-    case "DeclInj":
-      sig.red.declare_injective(ins.name);
-      log_ok(ins.ln,"Symbol declared injective",ins.name+" (no check)");
-      break;
-    case "Def":
-      sig.declare_symbol(ins);
-      rulechecker.declare_rule( Rew(ins.ln, Ref(ins.name),ins.def,ins.name+"_def") );
-      log_ok(ins.ln,"Symbol defined",ins.name+ " as " + pp_term(ins.def));
-      break;
-    case "Rew":
-      rulechecker.declare_rule(ins);
-      log_ok(ins.ln,"Rewrite rule added",pp_term(ins.lhs)+ " --\> " + pp_term(ins.rhs));
-      break;
-    case "Req":
-      break;
-    case "Eval":
-      log_info(ins.ln,"Eval",pp_term(sig.red.nf(ins.term, ins.ctx), ins.ctx)+"\n"+pp_context(ins.ctx));
-      break;
-    case "Infer":
-      log_info(ins.ln,"Infer",pp_term(sig.infer(ins.term, ins.ctx), ins.ctx)+"\n"+pp_context(ins.ctx));
-      break;
-    case "CheckType":
-      sig.check(ins.term, ins.type, ins.ctx);
-      log_ok(ins.ln,"CheckType",
-        pp_term(ins.term, ins.ctx)+" has indeed type "+pp_term(ins.type, ins.ctx)+"\n"+
-        pp_context(ins.ctx));
-      break;
-    case "CheckConv":
-      if (sig.red.are_convertible(ins.lhs, ins.rhs)) {
-        if (ins.cv) {
-          log_ok(ins.ln,"CheckConv",pp_term(ins.lhs,ins.ctx)+" is indeed convertible with "+pp_term(ins.rhs,ins.ctx));
-        } else {
-          log_warn(ins.ln,"CheckConv",pp_term(ins.lhs,ins.ctx)+" is in fact convertible with "+pp_term(ins.rhs,ins.ctx));
-        }
-      } else {
-        if (ins.cv) {
-          log_warn(ins.ln,"CheckConv",pp_term(ins.lhs,ins.ctx)+" is in fact not convertible with "+pp_term(ins.rhs,ins.ctx));
-        } else {
-          log_ok(ins.ln,"CheckConv",pp_term(ins.lhs,ins.ctx)+" is indeed not convertible with "+pp_term(ins.rhs,ins.ctx));
-        }
-      }
-      break;
-    case "Print":
-      log_info(ins.ln,"Show",pp_term(ins.term));
-      break;
-    case "DTree":
-      log_info(ins.ln,"DTree","Decision tree for symbol `"+ins.name+"`:\n"+pp_dtrees(sig.red.get(ins.name).decision_trees));
-      break;
-    default:
-      throw "Instruction:\nUnexepected instruction type:"+ins[c];
-  }
-}
-
 // Main processing loop
 function process_all_instructions() {
   clear_logs();
   try {
-    // Parsing of raw text code
-    code = editor.textContent;
-    instructions = parse(code);
-    log_ok(null,"Parsing","done.");
+    // Parsing of input text code
+    let instructions = parse(editor.textContent);
+    log('ok',null,"Parsing","done.");
     // Reseting the signature
     sig = new Signature();
-    rulechecker = new RuleChecker(sig);
-    instructions.forEach((i)=>process_instruction(sig,rulechecker,i));
-    log_ok(null,"File Checking","All done !","");
+    // Checking each instructions with the signature
+    instructions.forEach((ins) => sig.check_instruction(ins,log));
+    log('ok',null,"File Checking","All done !");
   } catch(e) {
-    log_err(e);
-    if (debug) { throw e; }
+    log('err',e.ln,e.title || 'ERROR',(e.msg || e)+"");
   }
 }
 
@@ -285,7 +222,7 @@ window.onload = function () {
     highlighter.reset(editor.textContent);
     editor.innerHTML = Array.from(highlighter).map(x=>x.value).join('');
   };
-  jar = CodeJar(editor, withLineNumbers(highlight, options={ color:'white' }), {tab: ' '.repeat(4)});
+  jar = CodeJar(editor, withLineNumbers(highlight, options={ color:'black' }), {tab: ' '.repeat(4)});
 };
 
 </script>
