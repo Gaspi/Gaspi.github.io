@@ -38,11 +38,11 @@ constant : (Nat -> Nat) -> Nat;
 
 // Note: instances of nameless meta-variables `*` are always assumed
 // applied to all available locally bounded variables.
-dummy : (Nat -> Nat) -> Nat;
-: dummy (x => *) --> z;
-#CHECK            dummy (x => z) == z;
-#CHECK            dummy (x => x) == z;
-#CHECK a : Nat |- dummy (x => a) == z;
+zero : (Nat -> Nat) -> Nat;
+: zero (x => *) --> z;
+#CHECK            zero (x => z) == z;
+#CHECK            zero (x => x) == z;
+#CHECK a : Nat |- zero (x => a) == z;
 
 // Parameters can be added to declared or defined symbols
 f (t:Ty) (x:T t) : T (arr t t):= lam t t (z => x);
@@ -78,7 +78,7 @@ f (t:Ty) (x:T t) : T (arr t t):= lam t t (z => x);
 // The `#DTREE` command allows to show the decision trees used to compute a symbol.
 // Decision trees are computed lazily (and erased eagerly).
 // Only the decision trees that were already needed will show.
-#DTREE dummy;
+#DTREE zero;
 
 // The `#TIME` command shows current date and time as well as the time elapsed
 // since the previous `#TIME` command.
@@ -90,22 +90,22 @@ f (t:Ty) (x:T t) : T (arr t t):= lam t t (z => x);
 // > The rule must still be well-formed
 // > Injective or constant symbols may still not be rewritten
 // Note : please don't do anything serious that relies on this feature...
-: dummy ==> z;
+: zero ==> z;
 
 // Import modules with the `#REQUIRE` command.
 // This is equivalent to the module being copied/pasted here
-#REQUIRE tests/dummy1;
-#INFER dummy1;
+#REQUIRE tests/basics;
+#EVAL fummy;
 
 // An alias can be provided to prefix all imported symbols with a namespace
-#REQUIRE tests/dummy1[dummy_module];
+#REQUIRE theories/FOL[fol];
 // Symbols in this module can be referred with `new_name.smb`.
-#INFER dummy_module.dummy1;
+#EVAL fol.not;
 // Note that (for now) the same module can be imported twice with distinct names.
 
-// `#REQUIRE` also allows to check and import ressources from any website
-#REQUIRE "https://gaspi.github.io/examples/tests/dummy2.dk";
-#INFER dummy2;
+// `#REQUIRE` also allows to check and import ressources from any third party servers
+#REQUIRE "https://gaspi.github.io/examples/theories/pure_lambda_calculus.dk"[lc];
+#INFER lc.lam;
 // Note : beware of CORS headers preventing such ressource to be received by the webpage.
 
 
