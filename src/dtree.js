@@ -1,11 +1,33 @@
-// Computes the reduction decision tree for the given rules
-// sharing a common head symbol assuming it is meant to be applied
-// to an application of this symbol to at least [arity] arguments
+/**
+ * @file 
+ *   Decision-tree based rewrite engine.
+ * 
+ */
 
+
+/** Builds the row of the matching matrix corresponding to the given rule
+ * 
+ * @param {object} rule
+ *   The rule used to build the row. If its stack is too short it is completed
+ * @param {int} arity
+ *   Number of columns: should be higher than the rule's stack length
+ * 
+ */
 function compute_row(rule, arity) {
   return { rule:rule, cols: Array(arity-rule.stack.length).fill(Joker()).concat(rule.stack) };
 }
 
+/** Computes the reduction decision tree for the given set of rules
+ * sharing a common head symbol assuming it is meant to be applied
+ * to an application of this symbol to at least [arity] arguments.
+ * 
+ * @param {Array} rules
+ *   Array of the rules to compute with a decision tree.
+ * @param {int} arity
+ *   Minimum number of arguments the DTree will be expecting.
+ * @return
+ *   A reduction decision tree ready to be used.
+ */
 function compute_decision_tree(rules, arity) {
   if (rules.length==0) { fail("DTree","Cannot compute decision tree for an empty set of rules."); }
   const mismatch = rules.find( (r) => r.head != rules[0].head );
@@ -14,23 +36,29 @@ function compute_decision_tree(rules, arity) {
     rows   : rules.map( (r) => compute_row(r,arity) ),
     depths : Array(arity).fill(0)
   };
-  return {[c]:'DTree',arity:arity,tree:compute_dtree(matrix)};
+  return {c:'DTree',arity:arity,tree:compute_dtree(matrix)};
 }
 
-// Returns a decision tree from the given matrix
+/** Computes a decision tree from the given matrix.
+ * 
+ * @param {Array} m
+ *   Array of matrix rows.
+ * @return
+ *   A reduction decision tree ready to be used.
+ */
 function compute_dtree(m) {
   if (m.rows.length == 0) { return null; }
   // Find the first column [j] that is not a meta-var in the first row of patterns
-  const j = m.rows[0].cols.findIndex((p) => p[c] != "MVar");
+  const j = m.rows[0].cols.findIndex((p) => p.c != "MVar");
   if (j<0) {
     return compute_matching_problem(m.rows[0], m.depths,
       def=compute_dtree({rows:m.rows.slice(1), depths:m.depths.slice(1)}));
   } else {
-    const res = { [c]:'Switch', index:j };
+    const res = { c:'Switch', index:j };
     for (let i = 0; i < m.rows.length; i++) {
       const row = m.rows[i];
       const [pat,stack] = get_head(row.cols[j]);
-      switch (pat[c]) {
+      switch (pat.c) {
         case "Lam":
           if (!res.Lam) {
             res.Lam = specialize(m,j,'Lam',null,1);
@@ -60,10 +88,10 @@ function compute_dtree(m) {
 
 function specialize_row(cols,j,cons,name,extra_cols) {
   const [pat,stack] = get_head(cols[j]);
-  if (pat[c] == 'MVar') {
+  if (pat.c == 'MVar') {
     return cols.concat(Array(extra_cols).fill(Joker()));
   }
-  if (pat[c] != cons) { return null; }
+  if (pat.c != cons) { return null; }
   if (cons!='Lam' && ( (pat.name || pat.index) != name || stack.length != extra_cols)) { return null; }
   const ncols = cols.concat( cons == 'Lam' ? [pat.body] : stack );
   ncols[j] = Joker();
@@ -82,17 +110,48 @@ function specialize(m,j,cons,index,extra_cols) {
     });
 }
 
+/** Checks that given term array [args] are distinct locally bounded variables [a_0, ..., a_n]
+    Returns an array A such that:
+    - A[a_i] is an unnamed var of index i
+    - A[b] is undefined for all variables b distinct from the a_i
+    Example:
+    Input:
+      args = [ z[2], y[0] ]
+      depth = 3
+    Ouput:
+      [ 1, undefined, 0 ]
+*/
+function get_meta_match(args, depth) {
+  const res = new Array(depth);
+  args.forEach( function (a,i) {
+    if (a.c !== 'Var' || a.index >= depth) {
+      fail("MetaMatch","Expected a locally bounded variable, got:"+pp_term(a));
+    } else if (res[a.index] != undefined) {
+      fail("MetaMatch","Expected distinct variables, got "+pp_term(a)+"twice");
+    } else {
+      res[a.index] = i;
+    }
+  });
+  return res;
+}
+
 function compute_matching_problem(row,depths,def=null) {
   const mvars = [];
   for (let i = 0; i < row.cols.length; i++) {
     const p = row.cols[i];
-    if (p[c] == 'MVar' && !p.joker) {
-      mvars.push({ index:i, name:p.name, args:get_meta_match(p.args), depth:depths[i] });
+    if (p.c == 'MVar' && !p.joker) {
+      mvars.push({
+        index:i,
+        name:p.name,
+        subst:get_meta_match(p.args, depths[i]),
+        depth:depths[i],
+        args: p.args,
+        joker_match: p.args.length === depths[i] && p.args.every( (e,i) => e.c === 'Var' && e.index === i)
+        });
     }
   }
-  return { [c]:'Test', match:mvars, rule:row.rule, def:def };
+  return { c:'Test', match:mvars, rule:row.rule, def:def };
 }
-
 
 
 function pp_dtrees(dtrees) {
@@ -100,7 +159,7 @@ function pp_dtrees(dtrees) {
   function pp(t,s) { res+='  '.repeat(t)+s+"\n"; }
   function pp_dtree(dtree,t) {
     if (!dtree) { pp(t,"Fail"); return; }
-    if (dtree[c] == 'Switch') {
+    if (dtree.c === 'Switch') {
       pp(t,"Look stack["+dtree.index+"]:");
       if (dtree.Lam) {
         pp(t,"Case Lam:");
@@ -122,14 +181,14 @@ function pp_dtrees(dtrees) {
           })
         );
       }
-    } else if (dtree[c] == 'Test') {
+    } else if (dtree.c === 'Test') {
       pp(t,"Match:");
       dtree.match.forEach((m)=>
         pp(t,""+m.name+"["+Object.keys(m.args).map(pp_term).join(', ')+"] = stack["+m.index+"]")
       );
       pp(t,"> Fire rule `"+dtree.rule.name+"`: "+pp_term(dtree.rule.rhs));
     } else {
-      fail("PPDTree","Unexpected constructor in dtree: "+dtree[c]);
+      fail("PPDTree","Unexpected constructor in dtree: "+dtree.c);
     }
     pp(t,"Default:");
     pp_dtree(dtree.def, t+1);
