@@ -533,7 +533,6 @@ class RuleChecker {
       }
     } else {
       const term_t = this.rhs_infer(assumptions, term, ctx);
-      console.log(type, term_t);
       if (!assumptions.are_convertible(type, term_t)) {
         fail("RHS Check", "Type mismatch on `"+pp_term(term, ctx)+"`.\n"+
           "- Expect = " + pp_term(type  , ctx)+"\n"+
